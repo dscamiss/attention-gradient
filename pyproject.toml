@@ -1,0 +1,30 @@
+[project]
+name = "attention-gradient"
+authors = [
+    {name = "dscamiss", email = "dscamiss@gmail.com"},
+]
+readme = "README.md"
+classifiers = ["License :: OSI Approved :: MIT License"]
+dependencies = [
+    "torch",
+    "jaxtyping",
+]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["F722"]
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+]
+
+[tool.pylint]
+disable = [
+    "abstract-method",
+    "arguments-differ",
+    "too-many-locals",
+]
+
+[tool.ruff.lint]
+ignore = ["F722"]
