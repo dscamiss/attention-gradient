@@ -5,10 +5,6 @@ authors = [
 ]
 readme = "README.md"
 classifiers = ["License :: OSI Approved :: MIT License"]
-dependencies = [
-    "torch",
-    "jaxtyping",
-]
 
 [tool.flake8]
 max-line-length = 88
