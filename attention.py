@@ -1,4 +1,6 @@
-"""Standard attention map implemented as a torch.autograd.Function."""
+"""Scaled dot-product attention map."""
+
+import math
 
 import torch
 from jaxtyping import Float
@@ -8,22 +10,19 @@ from torch.autograd.function import FunctionCtx
 
 
 class Attention(Function):
-    """Standard attention map."""
+    """Scaled dot-product attention map."""
 
     @staticmethod
     def forward(ctx: FunctionCtx, theta: Float[Tensor, "n 3d"]) -> Float[Tensor, "n d"]:
-        """Compute attention map output.
+        """Compute scaled dot-product attention map output.
 
         Args:
-            ctx (FunctionCtx): Context used to stash data for backward().
-            theta (Tensor): Input tensor of shape (n, 3d); theta = [Q, K, V].
-
-        Note:
-            We omit the standard scaling by 1/sqrt(d).
+            ctx (FunctionCtx): Context used to stash data for `backward()`.
+            theta (Tensor): Input tensor of shape `(n, 3d)`; `theta = [Q, K, V]`.
         """
         d = theta.shape[-1] // 3
         q, k, v = theta.split(d, dim=-1)
-        s = torch.softmax(q @ k.transpose(-1, -2), dim=-1)
+        s = torch.softmax(q @ k.transpose(-1, -2) / math.sqrt(d), dim=-1)
         ctx.save_for_backward(q, k, v, s)
         return s @ v
 
@@ -31,11 +30,11 @@ class Attention(Function):
     def backward(  # type: ignore[override]
         ctx: FunctionCtx, grad_output: Float[Tensor, "n d"]
     ) -> Float[Tensor, "n 3d"]:
-        """Compute gradient of attention map.
+        """Compute gradient of scaled dot-product attention map.
 
         Args:
-            ctx (FunctionCtx): Context used to retrieve stashed data from forward().
-            grad_output (Tensor): Gradient tensor of shape (n, 3d).
+            ctx (FunctionCtx): Context used to retrieve stashed data from `forward()`.
+            grad_output (Tensor): Gradient tensor of shape `(n, 3d)`.
         """
         q, k, v, s = ctx.saved_tensors  # type: ignore[attr-defined]
         n, d = q.shape
@@ -48,6 +47,9 @@ class Attention(Function):
             s_col = s_row.transpose(-1, -2)
             dsigma = torch.diag(s_col.squeeze()) - (s_col @ s_row)
             omega[i, :] = grad_output[i, :].unsqueeze(0) @ v_transpose @ dsigma
+
+        # Incorporate scaling factor
+        omega = (1.0 / math.sqrt(d)) * omega
 
         # Compute "Q" component
         q_comp = omega @ k
