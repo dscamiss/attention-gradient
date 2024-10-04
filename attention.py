@@ -19,7 +19,13 @@ class Attention(Function):
         Args:
             ctx (FunctionCtx): Context used to stash data for `backward()`.
             theta (Tensor): Input tensor of shape `(n, 3d)`; `theta = [Q, K, V]`.
+
+        Raises:
+            ValueError: If the shape of `theta` is invalid (it is not a 2-dimensional
+                tensor or its last dimension is not divisible by 3).
         """
+        if theta.dim() != 2 or theta.shape[-1] % 3 != 0:
+            raise ValueError(f"theta has invalid shape {theta.shape}")
         d = theta.shape[-1] // 3
         q, k, v = theta.split(d, dim=-1)
         s = torch.softmax(q @ k.transpose(-1, -2) / math.sqrt(d), dim=-1)
